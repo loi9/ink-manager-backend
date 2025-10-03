@@ -10,7 +10,7 @@ const app = express();
 // ================== Cấu hình CORS ==================
 // Chỉ cho phép frontend chính truy cập, hoặc "*" để test
 const corsOptions = {
-    origin: process.env.FRONTEND_URL || "*", // ví dụ: https://ink-manager-frontend.onrender.com
+    origin: "https://ink-manager-frontend.onrender.com", // ví dụ: https://ink-manager-frontend.onrender.com
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: false
 };
@@ -41,3 +41,4 @@ app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Backend URL: ${process.env.FRONTEND_URL || "http://localhost:" + PORT}`);
 });
+
