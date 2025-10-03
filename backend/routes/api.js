@@ -1,5 +1,4 @@
 // backend/routes/api.js
-const apiRoutes = require('./routes/api');
 const express = require('express');
 const router = express.Router();
 const Ink = require('../models/Ink');
@@ -275,3 +274,4 @@ router.get('/dashboard', async (req, res) => {
 
 
 module.exports = router;
+
