@@ -1,1 +1,4 @@
-
+# backend/.env
+# THAY THẾ CHUỖI NÀY BẰNG CHUỖI KẾT NỐI MONGODB ATLAS CỦA BẠN
+MONGO_URI="mongodb+srv://sa:YORorixfGNVVPR9r@cluster0.7jldzof.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+PORT=5000
