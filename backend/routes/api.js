@@ -259,4 +259,25 @@ router.get('/dashboard', async (req, res) => {
         res.status(500).json({ error: 'Failed to generate dashboard data' });
     }
 });
+// --- 9. CẬP NHẬT EVENT LOG ---
+router.put('/logs/:id', async (req, res) => {
+    try {
+        const logId = req.params.id;
+        const { date, unit_id, printer_id, event_type, status_detail } = req.body;
+
+        const updatedLog = await EventLog.findByIdAndUpdate(
+            logId,
+            { date, unit_id, printer_id, event_type, status_detail },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedLog) return res.status(404).json({ error: 'Log không tồn tại.' });
+
+        res.json(updatedLog);
+    } catch (err) {
+        console.error(err);
+        res.status(400).json({ error: err.message });
+    }
+});
 module.exports = router;
+
