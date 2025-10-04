@@ -1,10 +1,10 @@
+// backend/routes/api.js
 const express = require('express');
 const router = express.Router();
 const Ink = require('../models/Ink');
 const InkUnit = require('../models/InkUnit');
 const EventLog = require('../models/EventLog');
 const Printer = require('../models/Printer');
-
 
 // --- 1. HÀM KHỞI TẠO DỮ LIỆU MẪU ---
 router.post('/init', async (req, res) => {
@@ -41,7 +41,6 @@ router.post('/init', async (req, res) => {
     }
 });
 
-
 // --- 2. API Lấy danh sách INK ---
 router.get('/inks', async (req, res) => {
     try {
@@ -50,7 +49,6 @@ router.get('/inks', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Server Error' }); }
 });
 
-
 // --- 3. API Lấy danh sách PRINTERS ---
 router.get('/printers', async (req, res) => {
     try {
@@ -58,7 +56,6 @@ router.get('/printers', async (req, res) => {
         res.json(printers);
     } catch (err) { res.status(500).json({ error: 'Server Error' }); }
 });
-
 
 // --- 4. API Lấy danh sách HỘP MỰC ---
 router.get('/inkunits', async (req, res) => {
@@ -69,7 +66,6 @@ router.get('/inkunits', async (req, res) => {
         res.status(500).json({ error: 'Server Error' });
     }
 });
-
 
 // --- 5. Ghi EVENT LOG + Cập nhật thống kê hộp mực ---
 router.post('/events', async (req, res) => {
@@ -125,7 +121,6 @@ router.post('/events', async (req, res) => {
     }
 });
 
-
 // --- 6. API LOGS ---
 router.get('/logs', async (req, res) => {
     try {
@@ -145,7 +140,6 @@ router.delete('/logs/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to delete log' });
     }
 });
-
 
 // --- 7. CRUD InkUnit ---
 router.post('/inkunits', async (req, res) => {
@@ -200,17 +194,27 @@ router.delete('/inkunits/:id', async (req, res) => {
     }
 });
 
-
-// --- 8. API DASHBOARD (lấy trực tiếp từ InkUnit) ---
+// --- 8. API DASHBOARD (merge Ink + Printer để frontend hiển thị) ---
 router.get('/dashboard', async (req, res) => {
     try {
         const activeUnits = await InkUnit.find({ status: { $in: ['IN_STOCK', 'INSTALLED'] } });
-        res.json(activeUnits);
+        const inks = await Ink.find();
+        const printers = await Printer.find();
+
+        const inkMap = Object.fromEntries(inks.map(ink => [ink.ink_code, ink.ink_name]));
+        const printerMap = Object.fromEntries(printers.map(p => [p.printer_id, p.printer_name]));
+
+        const dashboardData = activeUnits.map(unit => ({
+            ...unit.toObject(),
+            ink_name: inkMap[unit.ink_code] || unit.ink_code,
+            printer_using: unit.current_printer_id ? printerMap[unit.current_printer_id] || unit.current_printer_id : 'KHO',
+        }));
+
+        res.json(dashboardData);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to load dashboard' });
     }
 });
-
 
 module.exports = router;
