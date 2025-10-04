@@ -279,5 +279,28 @@ router.put('/logs/:id', async (req, res) => {
         res.status(400).json({ error: err.message });
     }
 });
-module.exports = router;
+//----10 PUT /logs/:id - cập nhật log
+router.put('/logs/:id', async (req, res) => {
+    try {
+        const { date, printer_id, event_type, status_detail } = req.body;
 
+        const updatedLog = await EventLog.findByIdAndUpdate(
+            req.params.id,
+            {
+                ...(date && { date: new Date(date) }),
+                ...(printer_id && { printer_id }),
+                ...(event_type && { event_type }),
+                ...(status_detail !== undefined && { status_detail })
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedLog) return res.status(404).json({ error: 'Log không tồn tại' });
+
+        res.json(updatedLog);
+    } catch (err) {
+        console.error(err);
+        res.status(400).json({ error: err.message });
+    }
+});
+module.exports = router;
