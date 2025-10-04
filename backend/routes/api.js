@@ -194,27 +194,69 @@ router.delete('/inkunits/:id', async (req, res) => {
     }
 });
 
-// --- 8. API DASHBOARD (merge Ink + Printer để frontend hiển thị) ---
+// --- 8. API DASHBOARD (Tính toán đầy đủ) ---
 router.get('/dashboard', async (req, res) => {
     try {
+        // 1. Lấy hộp mực đang hoạt động
         const activeUnits = await InkUnit.find({ status: { $in: ['IN_STOCK', 'INSTALLED'] } });
+
+        // 2. Lấy danh sách log và các bảng liên quan
+        const logs = await EventLog.find().sort({ date: 1 });
         const inks = await Ink.find();
         const printers = await Printer.find();
 
         const inkMap = Object.fromEntries(inks.map(ink => [ink.ink_code, ink.ink_name]));
         const printerMap = Object.fromEntries(printers.map(p => [p.printer_id, p.printer_name]));
 
-        const dashboardData = activeUnits.map(unit => ({
-            ...unit.toObject(),
-            ink_name: inkMap[unit.ink_code] || unit.ink_code,
-            printer_using: unit.current_printer_id ? printerMap[unit.current_printer_id] || unit.current_printer_id : 'KHO',
-        }));
+        // 3. Tính toán dashboard
+        const dashboardData = activeUnits.map(unit => {
+            const unitLogs = logs.filter(log => log.unit_id === unit.unit_id);
+
+            // Lấy sự kiện REFILL và DRUM_REPLACE gần nhất
+            const refillEvents = unitLogs.filter(log => log.event_type === 'REFILL');
+            const drumEvents = unitLogs.filter(log => log.event_type === 'DRUM_REPLACE');
+
+            const latestRefill = refillEvents.length > 0 ? refillEvents[refillEvents.length - 1] : null;
+            const latestDrum = drumEvents.length > 0 ? drumEvents[drumEvents.length - 1] : null;
+
+            // Số lần nạp sau drum
+            let refillsAfterDrum = 0;
+            if (latestDrum) {
+                const drumTime = latestDrum.date.getTime();
+                refillsAfterDrum = refillEvents.filter(r => r.date.getTime() > drumTime).length;
+            }
+
+            // Chu kỳ nạp trung bình
+            let avgRefillCycle = 'N/A';
+            if (refillEvents.length >= 2) {
+                let totalDays = 0;
+                for (let i = 1; i < refillEvents.length; i++) {
+                    const diffTime = Math.abs(refillEvents[i].date - refillEvents[i - 1].date);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    totalDays += diffDays;
+                }
+                avgRefillCycle = (totalDays / (refillEvents.length - 1)).toFixed(1) + ' ngày';
+            }
+
+            return {
+                unit_id: unit.unit_id,
+                ink_code: unit.ink_code,
+                ink_name: unit.custom_name || inkMap[unit.ink_code] || unit.ink_code,
+                status: unit.status,
+                printer_using: unit.current_printer_id ? printerMap[unit.current_printer_id] || unit.current_printer_id : 'KHO',
+                latest_refill_date: latestRefill ? latestRefill.date.toISOString().split('T')[0] : 'N/A',
+                total_refill_count: refillEvents.length,
+                latest_drum_date: latestDrum ? latestDrum.date.toISOString().split('T')[0] : 'N/A',
+                total_drum_count: drumEvents.length,
+                refills_after_drum: refillsAfterDrum,
+                avg_refill_cycle: avgRefillCycle
+            };
+        });
 
         res.json(dashboardData);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Failed to load dashboard' });
+        res.status(500).json({ error: 'Failed to generate dashboard data' });
     }
 });
-
 module.exports = router;
