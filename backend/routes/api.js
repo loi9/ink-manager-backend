@@ -69,56 +69,64 @@ router.get('/inkunits', async (req, res) => {
 
 // --- 5. Ghi EVENT LOG + Cập nhật thống kê hộp mực ---
 router.post('/events', async (req, res) => {
-    try {
-        const { unit_id, printer_id, event_type, status_detail } = req.body;
+  try {
+    const { unit_id, printer_id, event_type, status_detail } = req.body;
 
-        // Ghi log
-        const newLog = new EventLog({ unit_id, printer_id, event_type, status_detail });
-        await newLog.save();
+    // Ghi log
+    const newLog = new EventLog({ unit_id, printer_id, event_type, status_detail });
+    await newLog.save();
 
-        // Lấy InkUnit
-        const unit = await InkUnit.findOne({ unit_id });
-        if (!unit) return res.status(404).json({ error: 'Không tìm thấy hộp mực' });
+    // Lấy InkUnit
+    const unit = await InkUnit.findOne({ unit_id });
+    if (!unit) return res.status(404).json({ error: 'Không tìm thấy hộp mực' });
 
-        let updateData = {};
+    let updateData = {};
 
-        if (event_type === 'INSTALL') {
-            updateData.status = 'INSTALLED';
-            updateData.current_printer_id = printer_id;
-        } 
-        else if (event_type === 'DISPOSE') {
-            updateData.status = 'DISPOSED';
-            updateData.current_printer_id = null;
-        } 
-        else if (event_type === 'REFILL') {
-            updateData.total_refill_count = (unit.total_refill_count || 0) + 1;
-            updateData.latest_refill_date = new Date();
-            updateData.refills_after_drum = (unit.refills_after_drum || 0) + 1;
+    // 🔧 Cập nhật printer_id cho mọi trường hợp
+    // Nếu gửi printer_id là "null" hoặc "Chờ sử dụng" thì vẫn lưu
+    updateData.current_printer_id = printer_id || null;
 
-            if (unit.latest_refill_date) {
-                const diffDays = Math.ceil((new Date() - unit.latest_refill_date) / (1000 * 60 * 60 * 24));
-                if (unit.total_refill_count > 0) {
-                    let prevAvg = parseFloat(unit.avg_refill_cycle) || 0;
-                    let newAvg = ((prevAvg * (unit.total_refill_count - 1)) + diffDays) / (unit.total_refill_count);
-                    updateData.avg_refill_cycle = newAvg.toFixed(1) + " ngày";
-                } else {
-                    updateData.avg_refill_cycle = diffDays + " ngày";
-                }
-            }
-        } 
-        else if (event_type === 'DRUM_REPLACE') {
-            updateData.total_drum_count = (unit.total_drum_count || 0) + 1;
-            updateData.latest_drum_date = new Date();
-            updateData.refills_after_drum = 0;
+    // Cập nhật logic theo loại sự kiện
+    if (event_type === 'INSTALL') {
+      updateData.status = 'INSTALLED';
+    } 
+    else if (event_type === 'DISPOSE') {
+      updateData.status = 'DISPOSED';
+    } 
+    else if (event_type === 'REFILL') {
+      updateData.total_refill_count = (unit.total_refill_count || 0) + 1;
+      updateData.latest_refill_date = new Date();
+      updateData.refills_after_drum = (unit.refills_after_drum || 0) + 1;
+
+      if (unit.latest_refill_date) {
+        const diffDays = Math.ceil(
+          (new Date() - unit.latest_refill_date) / (1000 * 60 * 60 * 24)
+        );
+        if (unit.total_refill_count > 0) {
+          let prevAvg = parseFloat(unit.avg_refill_cycle) || 0;
+          let newAvg =
+            (prevAvg * (unit.total_refill_count - 1) + diffDays) /
+            unit.total_refill_count;
+          updateData.avg_refill_cycle = newAvg.toFixed(1) + ' ngày';
+        } else {
+          updateData.avg_refill_cycle = diffDays + ' ngày';
         }
-
-        await InkUnit.updateOne({ unit_id }, { $set: updateData });
-
-        res.status(201).json(newLog);
-    } catch (err) {
-        console.error(err);
-        res.status(400).json({ error: err.message });
+      }
+    } 
+    else if (event_type === 'DRUM_REPLACE') {
+      updateData.total_drum_count = (unit.total_drum_count || 0) + 1;
+      updateData.latest_drum_date = new Date();
+      updateData.refills_after_drum = 0;
     }
+
+    // 🔧 Ghi thay đổi vào DB
+    await InkUnit.updateOne({ unit_id }, { $set: updateData });
+
+    res.status(201).json(newLog);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // --- 6. API LOGS ---
@@ -304,3 +312,4 @@ router.put('/logs/:id', async (req, res) => {
     }
 });
 module.exports = router;
+
