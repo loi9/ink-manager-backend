@@ -235,8 +235,8 @@ router.get('/dashboard', async (req, res) => {
             }
 
             // Chu kỳ nạp trung bình
-            let avgRefillCycle = 'N/A';
-            if (refillEvents.length >= 2) {
+            {/*let avgRefillCycle = 'N/A';
+           if (refillEvents.length >= 2) {
                 let totalDays = 0;
                 for (let i = 1; i < refillEvents.length; i++) {
                     const diffTime = Math.abs(refillEvents[i].date - refillEvents[i - 1].date);
@@ -244,6 +244,21 @@ router.get('/dashboard', async (req, res) => {
                     totalDays += diffDays;
                 }
                 avgRefillCycle = (totalDays / (refillEvents.length - 1)).toFixed(1) + ' ngày';
+            }*/}
+            let avgRefillCycle = 'N/A';
+
+            if (refillEvents.length >= 2) {
+
+                refillEvents.sort((a, b) => a.date - b.date);
+
+                //chỉ lấy 2 mốc nạp gần nhất
+                const lastRefill = refillEvents[refillEvents.length - 1].date;
+                const prevRefill = refillEvents[refillEvents.length - 2].date;
+
+                const diffTime = Math.abs(lastRefill - prevRefill);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                avgRefillCycle = diffDays + ' ngày';
             }
 
             return {
@@ -312,4 +327,5 @@ router.put('/logs/:id', async (req, res) => {
     }
 });
 module.exports = router;
+
 
