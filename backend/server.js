@@ -19,6 +19,24 @@ app.use(express.json());    // parse JSON body
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB connected successfully.'))
     .catch(err => console.log('MongoDB connection error:', err));
+/* ======================================================
+    Cho phép truy cập backend bằng browser
+====================================================== */
+app.get('/', (req, res) => {
+    res.send('Ink Manager Backend is running');
+});
+/* ======================================================
+   🔹 HEALTH CHECK
+   - Đánh thức backend khi bị sleep
+   - Frontend ping trước khi load dữ liệu
+====================================================== */
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        uptime: process.uptime(),
+        timestamp: new Date()
+    });
+});
 
 // ================== Routes ==================
 app.use('/api', apiRoutes);
@@ -26,5 +44,6 @@ app.use('/api', apiRoutes);
 // ================== Start server ==================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
