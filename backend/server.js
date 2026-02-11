@@ -44,6 +44,17 @@ app.use('/api', apiRoutes);
 // ================== Start server ==================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ================== KEEP ALIVE ==================
+app.get('/health', async (req, res) => {
+    try {
+        // ép Mongo phải active
+        await mongoose.connection.db.admin().ping();
+        res.status(200).send('Backend alive + Mongo active');
+    } catch (err) {
+        res.status(500).send('Mongo not ready');
+    }
+});
+
 
 
 
