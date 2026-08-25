@@ -23,10 +23,11 @@ mongoose.connect(process.env.MONGO_URI)
 mongoose.connect(process.env.MONGO_URI)
     .then(async () => {
         console.log('MongoDB connected successfully.');
+        console.log('Database:', mongoose.connection.name);
 
-        console.log('Database:', mongoose.connection.db.databaseName);
-
-        const collections = await mongoose.connection.db.listCollections().toArray();
+        const collections = await mongoose.connection.db
+            .listCollections()
+            .toArray();
 
         console.log(
             'Collections:',
@@ -41,7 +42,9 @@ mongoose.connect(process.env.MONGO_URI)
             console.log(`${c.name}: ${count} documents`);
         }
     })
-    .catch(err => console.log('MongoDB connection error:', err));
+    .catch(err => {
+        console.log('MongoDB connection error:', err);
+    });
 
 /* ======================================================
     Cho phép truy cập backend bằng browser
